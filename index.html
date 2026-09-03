@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Logistic Map — Interactive Dashboard</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b;
+  --cp-accent-hover: #9a1a41;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #919191;
+  --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-hover: #fb7b91;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72);
+  --cp-panel-strong: rgba(41, 41, 41, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  background: var(--cp-bg);
+  color: var(--cp-text);
+  font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  height: 100%;
+}
+.wrap {
+  max-width: 1360px; margin: 0 auto; padding: 12px 16px 8px;
+  height: 100%; display: flex; flex-direction: column; overflow: hidden;
+}
+
+header { flex: 0 0 auto; }
+header h1 { font-size: 1.2rem; margin: 0 0 2px; letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--cp-text-muted); font-size: 0.82rem; }
+header .eq {
+  font-family: Consolas, "Courier New", Courier, monospace;
+  color: var(--cp-accent); font-weight: 600;
+}
+
+.controls {
+  flex: 0 0 auto;
+  margin: 8px 0 6px;
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: 12px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+  padding: 8px 14px;
+}
+.rrow { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.rrange { flex: 1 1 320px; display: flex; align-items: center; gap: 12px; min-width: 260px; }
+.rlabel { font-family: Consolas, monospace; font-weight: 700; font-size: 1.15rem; }
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 6px; border-radius: 999px;
+  background: linear-gradient(to right, var(--cp-accent) 0%, var(--cp-accent) var(--fill,50%), var(--cp-border) var(--fill,50%), var(--cp-border) 100%);
+  outline: none; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--cp-accent); border: 2px solid var(--cp-surface);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3); cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--cp-accent); border: 2px solid var(--cp-surface); cursor: pointer;
+}
+input[type="number"] {
+  width: 92px; padding: 6px 8px; font-family: Consolas, monospace; font-size: 0.95rem;
+  background: var(--cp-bg-elevated); color: var(--cp-text);
+  border: 1px solid var(--cp-border-strong); border-radius: 8px;
+}
+input[type="number"]:focus { outline: 2px solid var(--cp-accent-soft); border-color: var(--cp-accent); }
+
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.preset {
+  font: inherit; font-size: 0.8rem; cursor: pointer;
+  padding: 5px 10px; border-radius: 999px;
+  background: var(--cp-surface-soft); color: var(--cp-text);
+  border: 1px solid var(--cp-border); transition: all 0.12s ease;
+}
+.preset:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
+.preset b { color: var(--cp-text-muted); font-weight: 600; }
+.preset:hover b { color: var(--cp-accent); }
+
+.prow { margin-top: 6px; }
+.phint { font-size: 0.74rem; color: var(--cp-text-muted); flex: 1 1 200px; }
+
+.stats { display: flex; gap: 8px; flex-wrap: wrap; margin: 0; flex: 1 1 auto; }
+.chip {
+  background: var(--cp-bg-elevated); border: 1px solid var(--cp-border);
+  border-radius: 9px; padding: 4px 10px; font-size: 0.8rem; min-width: 84px;
+}
+.chip .k { color: var(--cp-text-soft); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; display: block; }
+.chip .v { font-family: Consolas, monospace; font-weight: 700; font-size: 0.92rem; }
+.chip.regime .v { color: var(--cp-accent); }
+
+.grid {
+  flex: 1 1 auto; min-height: 0;
+  display: grid; grid-template-columns: 0.42fr 1fr; grid-template-rows: 1.6fr 1fr; gap: 10px;
+}
+.card.wide { grid-column: 1 / -1; }
+@media (max-width: 760px) { .grid { grid-template-columns: 1fr; grid-template-rows: repeat(3, 1fr); } .card.wide { grid-column: auto; } }
+
+.card {
+  background: var(--cp-surface); border: 1px solid var(--cp-border);
+  border-radius: 12px; padding: 8px 12px 8px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.card h2 { font-size: 0.9rem; margin: 0 0 1px; flex: 0 0 auto; }
+.card .cap { font-size: 0.72rem; color: var(--cp-text-muted); margin: 0 0 5px; flex: 0 0 auto; }
+.canvas-host { position: relative; flex: 1 1 auto; min-height: 0; width: 100%; }
+.canvas-host canvas { display: block; width: 100%; height: 100%; }
+.canvas-host.stack canvas { position: absolute; inset: 0; }
+
+footer { flex: 0 0 auto; margin-top: 6px; color: var(--cp-text-soft); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+footer code { font-family: Consolas, monospace; color: var(--cp-accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>The Logistic Map, live</h1>
+    <p>One knob, four views of chaos. The rule: <span class="eq">x&nbsp;&rarr;&nbsp;r&nbsp;&middot;&nbsp;x&nbsp;&middot;&nbsp;(1&nbsp;&minus;&nbsp;x)</span> &mdash; drag <b>r</b> and watch a fixed point split into 2, 4, 8&hellip; then dissolve.</p>
+  </header>
+
+  <div class="controls">
+    <div class="rrow">
+      <div class="rrange">
+        <span class="rlabel">r</span>
+        <input id="rSlider" type="range" min="2.5" max="4" step="0.0001" value="3.2" />
+        <input id="rNumber" type="number" min="0" max="4" step="0.0001" value="3.2000" />
+      </div>
+      <div class="presets" id="presets"></div>
+    </div>
+    <div class="rrow prow">
+      <div class="rrange">
+        <span class="rlabel" style="font-size:0.95rem;">2<sup>k</sup></span>
+        <input id="pSlider" type="range" min="0" max="10" step="1" value="1" />
+        <input id="pNumber" type="number" min="1" max="1024" step="1" value="2" />
+      </div>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>The parabola &amp; its cobweb</h2>
+      <p class="cap" id="capParab"></p>
+      <div class="canvas-host"><canvas id="cParab"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Bifurcation atlas</h2>
+      <p class="cap" id="capBif"></p>
+      <div class="canvas-host stack">
+        <canvas id="cBifBg"></canvas>
+        <canvas id="cBifFg"></canvas>
+      </div>
+    </div>
+
+    <div class="card wide">
+      <h2>Time series &mdash; the settled tail</h2>
+      <p class="cap" id="capTail"></p>
+      <div class="canvas-host"><canvas id="cTail"></canvas></div>
+    </div>
+  </div>
+
+  <footer>
+    Seed x&#8320; = 0.5. The bifurcation background is precomputed (1000&times; sweep, transient discarded). Note the <b>straight top edge y = r/4</b> &mdash; the image of the parabola's peak. Built to accompany the KQL logistic-map post.
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+// ---------- theme-aware color access ----------
+function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+let C = {};
+function refreshColors() {
+  C = {
+    text: css('--cp-text'),
+    muted: css('--cp-text-muted'),
+    soft: css('--cp-text-soft'),
+    border: css('--cp-border'),
+    borderStrong: css('--cp-border-strong'),
+    accent: css('--cp-accent'),
+    link: css('--cp-link'),
+    success: css('--cp-success'),
+    surface: css('--cp-surface'),
+    bgElev: css('--cp-bg-elevated'),
+    accentSoft: css('--cp-accent-soft'),
+    dark: document.documentElement.getAttribute('data-theme') === 'dark',
+  };
+}
+refreshColors();
+
+// categorical palette for the recurring attractor levels; golden-angle hues so that
+// neighbouring heights get *contrasting* colors (emphasize distinct values, not a height ramp).
+function levelPalette(n) {
+  const s = C.dark ? 68 : 62, l = C.dark ? 62 : 46;
+  const arr = [];
+  for (let i = 0; i < n; i++) {
+    const hue = Math.round((i * 137.508) % 360);
+    arr.push('hsl(' + hue + ' ' + s + '% ' + l + '%)');
+  }
+  return arr;
+}
+function nearestLevel(v, levels) {
+  let bi = 0, bd = Infinity;
+  for (let i = 0; i < levels.length; i++) { const d = Math.abs(levels[i] - v); if (d < bd) { bd = d; bi = i; } }
+  return bi;
+}
+
+// ---------- math ----------
+const f = (r, x) => r * x * (1 - x);
+function orbit(r, seed, n) {
+  const a = new Float64Array(n + 1);
+  a[0] = seed;
+  for (let i = 0; i < n; i++) a[i + 1] = f(r, a[i]);
+  return a;
+}
+function analytics(r, seed) {
+  // long run for Lyapunov + attractor clustering
+  let x = seed;
+  const trans = 2000, keep = 4000;
+  for (let i = 0; i < trans; i++) x = f(r, x);
+  let lyap = 0, cnt = 0;
+  const tail = [];
+  for (let i = 0; i < keep; i++) {
+    const d = Math.abs(r * (1 - 2 * x));
+    if (d > 0) { lyap += Math.log(d); cnt++; }
+    if (i < 600) tail.push(x);
+    x = f(r, x);
+  }
+  lyap = lyap / cnt;
+  // cluster tail to estimate period
+  const sorted = tail.slice().sort((p, q) => p - q);
+  const eps = 0.0025;
+  let clusters = 1;
+  for (let i = 1; i < sorted.length; i++) if (sorted[i] - sorted[i - 1] > eps) clusters++;
+  let period = clusters, regime;
+  if (r < 1) { regime = "extinction"; }
+  else if (clusters > 20) { regime = "chaos"; period = Infinity; }
+  else if (clusters === 1) { regime = r < 3 ? "fixed point" : "fixed point"; }
+  else { regime = "period " + clusters; }
+  // invariant interval  [f2(1/2), f(1/2)] clipped
+  const top = r / 4;
+  const bot = f(r, top);
+  const invLo = Math.max(0, Math.min(top, bot));
+  const invHi = Math.min(1, Math.max(top, bot));
+  return { lyap, period, regime, invLo, invHi, top };
+}
+
+// ---------- canvas plumbing (HiDPI) ----------
+function fitCanvas(cv) {
+  const host = cv.parentElement;
+  const w = host.clientWidth, h = host.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w, h };
+}
+function frame(ctx, w, h, pad, xd, yd) {
+  const [x0, x1] = xd, [y0, y1] = yd;
+  const iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
+  const mx = v => pad.l + (v - x0) / (x1 - x0) * iw;
+  const my = v => h - pad.b - (v - y0) / (y1 - y0) * ih;
+  // frame
+  ctx.strokeStyle = C.border; ctx.lineWidth = 1;
+  ctx.strokeRect(pad.l + 0.5, pad.t + 0.5, iw - 1, ih - 1);
+  return { mx, my, iw, ih };
+}
+function ticksX(ctx, m, pad, w, h, vals, fmt) {
+  ctx.fillStyle = C.soft; ctx.font = '11px Consolas, monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.strokeStyle = C.border;
+  vals.forEach(v => {
+    const px = m.mx(v);
+    ctx.globalAlpha = 0.5; ctx.beginPath();
+    ctx.moveTo(px, pad.t); ctx.lineTo(px, h - pad.b); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillText(fmt(v), px, h - pad.b + 4);
+  });
+}
+function ticksY(ctx, m, pad, w, h, vals, fmt) {
+  ctx.fillStyle = C.soft; ctx.font = '11px Consolas, monospace';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.strokeStyle = C.border;
+  vals.forEach(v => {
+    const py = m.my(v);
+    ctx.globalAlpha = 0.5; ctx.beginPath();
+    ctx.moveTo(pad.l, py); ctx.lineTo(w - pad.r, py); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillText(fmt(v), pad.l - 5, py);
+  });
+}
+
+// ---------- bifurcation background (precomputed once) ----------
+const BIF = { rmin: 2.5, rmax: 4.0, cols: 1100, iters: 700, keep: 220, pts: null };
+function computeBif() {
+  const pts = [];
+  for (let c = 0; c < BIF.cols; c++) {
+    const r = Math.min(3.9999, BIF.rmin + (BIF.rmax - BIF.rmin) * c / (BIF.cols - 1));
+    let x = 0.5;
+    for (let i = 0; i < BIF.iters - BIF.keep; i++) x = f(r, x);
+    for (let i = 0; i < BIF.keep; i++) { x = f(r, x); pts.push(r, x); }
+  }
+  BIF.pts = new Float64Array(pts);
+}
+computeBif();
+
+const padBif = { l: 40, r: 10, t: 10, b: 26 };
+function drawBifBg() {
+  const cv = document.getElementById('cBifBg');
+  const { ctx, w, h } = fitCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  const m = frame(ctx, w, h, padBif, [BIF.rmin, BIF.rmax], [0, 1]);
+  ticksX(ctx, m, padBif, w, h, [2.5, 3.0, 3.5, 4.0], v => v.toFixed(1));
+  ticksY(ctx, m, padBif, w, h, [0, 0.5, 1], v => v.toFixed(1));
+  // points
+  const inkDark = css('--cp-text');
+  ctx.fillStyle = inkDark;
+  ctx.globalAlpha = 0.28;
+  const p = BIF.pts;
+  for (let i = 0; i < p.length; i += 2) {
+    const px = m.mx(p[i]), py = m.my(p[i + 1]);
+    ctx.fillRect(px, py, 0.9, 0.9);
+  }
+  ctx.globalAlpha = 1;
+  // top edge y = r/4
+  ctx.strokeStyle = C.link; ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(m.mx(BIF.rmin), m.my(BIF.rmin / 4));
+  ctx.lineTo(m.mx(4), m.my(1));
+  ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = C.link; ctx.font = '10px Consolas, monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.fillText('y = r/4', m.mx(2.62), m.my(2.62 / 4) - 2);
+  return m;
+}
+let bifMap = null;
+function drawBifFg(r, tail) {
+  const cv = document.getElementById('cBifFg');
+  const { ctx, w, h } = fitCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  if (!bifMap) return;
+  const m = bifMap;
+  if (r >= BIF.rmin && r <= BIF.rmax) {
+    const px = m.mx(r);
+    ctx.strokeStyle = C.accent; ctx.lineWidth = 1.6; ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.moveTo(px, padBif.t); ctx.lineTo(px, h - padBif.b); ctx.stroke();
+    ctx.globalAlpha = 1;
+    // attractor dots at this r
+    ctx.fillStyle = C.accent;
+    for (const x of tail) {
+      const py = m.my(x);
+      ctx.beginPath(); ctx.arc(px, py, 2.4, 0, 6.2832); ctx.fill();
+    }
+  }
+}
+
+// ---------- parabola + cobweb ----------
+const padP = { l: 34, r: 10, t: 10, b: 24 };
+function drawParab(r, ana) {
+  const cv = document.getElementById('cParab');
+  const { ctx, w, h } = fitCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  // letterbox into a centered rectangle (close to square, slightly wide) to maximize the graph
+  const availW = w - padP.l - padP.r, availH = h - padP.t - padP.b;
+  let bw = availH * 1.2, bh = availH;
+  if (bw > availW) { bw = availW; bh = availW / 1.2; }
+  const pad = {
+    l: padP.l + (availW - bw) / 2, r: padP.r + (availW - bw) / 2,
+    t: padP.t + (availH - bh) / 2, b: padP.b + (availH - bh) / 2,
+  };
+  const m = frame(ctx, w, h, pad, [0, 1], [0, 1]);
+  ticksX(ctx, m, pad, w, h, [0, 0.5, 1], v => v.toFixed(1));
+  ticksY(ctx, m, pad, w, h, [0, 0.5, 1], v => v.toFixed(1));
+
+  // invariant interval band (state lives here)
+  if (isFinite(ana.invLo)) {
+    ctx.fillStyle = C.accentSoft;
+    ctx.fillRect(m.mx(ana.invLo), pad.t, m.mx(ana.invHi) - m.mx(ana.invLo), h - pad.t - pad.b);
+  }
+  // diagonal y=x
+  ctx.strokeStyle = C.borderStrong; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(m.mx(0), m.my(0)); ctx.lineTo(m.mx(1), m.my(1)); ctx.stroke();
+  ctx.setLineDash([]);
+  // parabola
+  ctx.strokeStyle = C.accent; ctx.lineWidth = 2; ctx.beginPath();
+  for (let i = 0; i <= 200; i++) {
+    const x = i / 200, y = f(r, x);
+    const px = m.mx(x), py = m.my(Math.min(1.02, y));
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.stroke();
+  // peak marker r/4
+  const peakY = Math.min(1, r / 4);
+  ctx.fillStyle = C.accent;
+  ctx.beginPath(); ctx.arc(m.mx(0.5), m.my(peakY), 3, 0, 6.2832); ctx.fill();
+  // horizontal guide at the peak height y = r/4 (same value as the bifurcation top edge)
+  ctx.strokeStyle = C.link; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.globalAlpha = 0.9;
+  ctx.beginPath(); ctx.moveTo(m.mx(0), m.my(peakY)); ctx.lineTo(m.mx(0.5), m.my(peakY)); ctx.stroke();
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
+  ctx.fillStyle = C.link; ctx.font = '10px Consolas, monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.fillText('y = r/4 = ' + peakY.toFixed(2), m.mx(0.02), m.my(peakY) - 2);
+
+  // cobweb
+  const o = orbit(r, 0.5, 60);
+  ctx.strokeStyle = C.link; ctx.lineWidth = 1;
+  ctx.beginPath();
+  let px = m.mx(o[0]), py = m.my(0);
+  ctx.moveTo(px, py);
+  for (let i = 0; i < o.length - 1; i++) {
+    ctx.globalAlpha = 0.35 + 0.55 * (i / o.length);
+    const xi = o[i], xn = o[i + 1];
+    ctx.lineTo(m.mx(xi), m.my(xn)); // vertical up to curve
+    ctx.stroke(); ctx.beginPath(); ctx.moveTo(m.mx(xi), m.my(xn));
+    ctx.lineTo(m.mx(xn), m.my(xn)); // horizontal to diagonal
+    ctx.stroke(); ctx.beginPath(); ctx.moveTo(m.mx(xn), m.my(xn));
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ---------- full time series ----------
+const padT = { l: 34, r: 10, t: 10, b: 22 };
+function drawSeries(cvId, r, seed, nShow, opts) {
+  const cv = document.getElementById(cvId);
+  const { ctx, w, h } = fitCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  const start = opts.start || 0;
+  const total = start + nShow;
+  const o = orbit(r, seed, total);
+  let ylo = 0, yhi = 1;
+  if (opts.autoY) {
+    ylo = Infinity; yhi = -Infinity;
+    for (let i = start; i <= total; i++) { ylo = Math.min(ylo, o[i]); yhi = Math.max(yhi, o[i]); }
+    const pad = Math.max(0.02, (yhi - ylo) * 0.15);
+    ylo = Math.max(0, ylo - pad); yhi = Math.min(1, yhi + pad);
+    if (yhi - ylo < 0.02) { yhi += 0.01; ylo -= 0.01; }
+  }
+  const m = frame(ctx, w, h, padT, [start, total], [ylo, yhi]);
+  const xt = [];
+  const step = Math.max(1, Math.round((total - start) / 6));
+  for (let v = start; v <= total; v += step) xt.push(v);
+  ticksX(ctx, m, padT, w, h, xt, v => String(v));
+  ticksY(ctx, m, padT, w, h, [ylo, (ylo + yhi) / 2, yhi], v => v.toFixed(2));
+
+  const lvls = opts.levels || [];
+  const pal = lvls.length ? levelPalette(lvls.length) : [];
+
+  if (lvls.length) {
+    ctx.save();
+    ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.globalAlpha = 0.55;
+    for (let i = 0; i < lvls.length; i++) {
+      const lv = lvls[i];
+      if (lv < ylo || lv > yhi) continue;
+      const py = m.my(lv);
+      ctx.strokeStyle = pal[i];
+      ctx.beginPath(); ctx.moveTo(m.mx(start), py); ctx.lineTo(m.mx(total), py); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  const col = opts.color || C.accent;
+  ctx.strokeStyle = lvls.length ? C.muted : col;
+  ctx.globalAlpha = lvls.length ? 0.4 : 1;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = start; i <= total; i++) {
+    const px = m.mx(i), py = m.my(o[i]);
+    (i === start) ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  if (opts.dots) {
+    for (let i = start; i <= total; i++) {
+      ctx.fillStyle = lvls.length ? pal[nearestLevel(o[i], lvls)] : col;
+      ctx.beginPath(); ctx.arc(m.mx(i), m.my(o[i]), opts.dotR || 2.2, 0, 6.2832); ctx.fill();
+    }
+  }
+  // return the tail values (unique-ish) for the bif overlay
+  return o;
+}
+
+// ---------- master render ----------
+const rSlider = document.getElementById('rSlider');
+const rNumber = document.getElementById('rNumber');
+const statsEl = document.getElementById('stats');
+const pSlider = document.getElementById('pSlider');
+const pNumber = document.getElementById('pNumber');
+
+// a representative r *inside* each period-2^k band (a clear, well-separated cycle), k = 0..10.
+// low bands sit mid-band so the cycle is visually obvious; high ones crowd toward r&#8734;&#8776;3.56994567.
+const PERIOD_R = [2.8, 3.2, 3.5, 3.555, 3.566, 3.5692, 3.5698, 3.56991, 3.569938, 3.569944, 3.5699453];
+let selectedPeriod = 2;   // period of the band jumped to via the 2^k control; null = free r-drag
+let currentR = 3.2;       // the exact r used for all computation (slider only snaps the thumb)
+
+function updatePeriodUI(ana) {
+  if (selectedPeriod != null) {
+    pSlider.value = Math.round(Math.log2(selectedPeriod));
+    pNumber.value = selectedPeriod;
+  } else {
+    const p = ana.period;
+    if (p !== Infinity && p >= 1 && (p & (p - 1)) === 0 && p <= 1024) {
+      pSlider.value = Math.round(Math.log2(p));
+      pNumber.value = p;
+    } else {
+      pNumber.value = (p === Infinity) ? '' : p;   // chaos -> blank; odd window (e.g. 3) -> that number
+    }
+  }
+  pSlider.style.setProperty('--fill', (+pSlider.value / 10 * 100) + '%');
+}
+
+function fmtLyap(l) { return (l >= 0 ? '+' : '') + l.toFixed(3); }
+function periodLabel(ana) {
+  if (ana.regime === 'chaos') return 'chaos';
+  if (ana.regime === 'extinction') return '0';
+  return ana.period === Infinity ? '\u221e' : String(ana.period);
+}
+
+function renderStats(r, ana, dispPeriod, dispRegime) {
+  const items = [
+    ['r', r.toFixed(4)],
+    ['peak r/4', (r / 4).toFixed(3)],
+    ['orbit lives in', '[' + ana.invLo.toFixed(3) + ', ' + ana.invHi.toFixed(3) + ']'],
+    ['period', dispPeriod],
+    ['Lyapunov \u03bb', fmtLyap(ana.lyap)],
+  ];
+  let html = '';
+  items.forEach(([k, v]) => {
+    html += '<div class="chip"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>';
+  });
+  html += '<div class="chip regime"><span class="k">regime</span><span class="v">' + dispRegime + '</span></div>';
+  statsEl.innerHTML = html;
+}
+
+function tailValues(r) {
+  let x = 0.5;
+  for (let i = 0; i < 2000; i++) x = f(r, x);
+  const raw = [];
+  for (let i = 0; i < 256; i++) { x = f(r, x); raw.push(x); }
+  // dedupe for the bif overlay
+  const uniq = [];
+  const sorted = raw.slice().sort((a, b) => a - b);
+  for (let i = 0; i < sorted.length; i++) {
+    if (i === 0 || sorted[i] - sorted[i - 1] > 0.002) uniq.push(sorted[i]);
+    if (uniq.length > 40) break;
+  }
+  return uniq;
+}
+
+function tailLevels(r, start, n) {
+  const o = orbit(r, 0.5, start + n);
+  const seg = [];
+  for (let i = start; i <= start + n; i++) seg.push(o[i]);
+  const sorted = seg.slice().sort((a, b) => a - b);
+  const levels = [];
+  for (let i = 0; i < sorted.length; i++) {
+    if (i === 0 || sorted[i] - sorted[i - 1] > 0.004) levels.push(sorted[i]);
+    if (levels.length > 64) break;
+  }
+  return levels;
+}
+
+let raf = null;
+function render() {
+  const r = currentR;
+  const ana = analytics(r, 0.5);
+  const dispPeriod = selectedPeriod != null
+    ? (selectedPeriod <= 1 ? '1' : String(selectedPeriod))
+    : periodLabel(ana);
+  const dispRegime = selectedPeriod != null
+    ? (selectedPeriod <= 1 ? 'fixed point' : 'period ' + selectedPeriod)
+    : ana.regime;
+  renderStats(r, ana, dispPeriod, dispRegime);
+
+  const levels = tailLevels(r, 400, 47);
+  drawParab(r, ana);
+  drawBifFg(r, tailValues(r));
+  drawSeries('cTail', r, 0.5, 47, { start: 400, color: C.success, autoY: true, dots: true, dotR: 2.4, levels });
+  updatePeriodUI(ana);
+
+  // captions
+  document.getElementById('capParab').textContent =
+    'f(x)=r\u00b7x(1\u2212x). Blue = cobweb orbit; rose band = where it settles.';
+  document.getElementById('capBif').textContent =
+    'Every settled value vs r. Rose line = your r; dots = the current attractor. Dashed blue = the top edge y=r/4.';
+  const tailNote = (selectedPeriod != null && selectedPeriod >= 32)
+    ? 'Near r\u221e the newest split is microscopic (\u221d\u221a(r\u2212r*)) \u2014 levels crowd together.'
+    : 'Dashed guides mark the distinct attractor levels \u2014 count them to read the period.';
+  document.getElementById('capTail').textContent =
+    'Steps 400\u2013447 (auto-zoomed): the settled cycle. ' + tailNote;
+}
+
+function applyR(v, opts) {
+  opts = opts || {};
+  v = Math.max(2.5, Math.min(3.9999, v));
+  currentR = v;                 // exact r used for all computation
+  rSlider.value = v;            // thumb only (snaps to the 0.0001 grid)
+  if (opts.reformat !== false) rNumber.value = v.toFixed(4);
+  const pct = (v - 2.5) / (4 - 2.5) * 100;
+  rSlider.style.setProperty('--fill', pct + '%');
+  if (raf) cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(render);
+}
+rSlider.addEventListener('input', () => { selectedPeriod = null; applyR(parseFloat(rSlider.value)); });
+rNumber.addEventListener('input', () => {
+  const v = parseFloat(rNumber.value); if (isNaN(v)) return;
+  selectedPeriod = null; applyR(v, { reformat: false });
+});
+rNumber.addEventListener('change', () => {
+  const v = parseFloat(rNumber.value); if (isNaN(v)) return;
+  selectedPeriod = null; applyR(v);
+});
+pSlider.addEventListener('input', () => {
+  const k = +pSlider.value; selectedPeriod = Math.pow(2, k); applyR(PERIOD_R[k]);
+});
+pNumber.addEventListener('change', () => {
+  let p = parseInt(pNumber.value, 10); if (isNaN(p) || p < 1) { updatePeriodUI(analytics(currentR, 0.5)); return; }
+  let k = Math.max(0, Math.min(10, Math.round(Math.log2(p))));
+  selectedPeriod = Math.pow(2, k); applyR(PERIOD_R[k]);
+});
+
+// presets
+const PRESETS = [
+  ['2.8', 'fixed'], ['3.2', 'period 2'], ['3.5', 'period 4'],
+  ['3.555', 'period 8'], ['3.5699', 'onset'], ['3.828', 'period 3'], ['3.999', 'chaos'],
+];
+const presetsEl = document.getElementById('presets');
+PRESETS.forEach(([v, label]) => {
+  const b = document.createElement('button');
+  b.className = 'preset';
+  b.innerHTML = 'r=' + v + ' <b>' + label + '</b>';
+  b.addEventListener('click', () => { selectedPeriod = null; applyR(parseFloat(v)); });
+  presetsEl.appendChild(b);
+});
+
+// resize + theme handling
+let rz = null;
+function fullRedraw() {
+  refreshColors();
+  bifMap = drawBifBg();
+  render();
+}
+window.addEventListener('resize', () => {
+  if (rz) clearTimeout(rz);
+  rz = setTimeout(fullRedraw, 120);
+});
+const mq = window.matchMedia('(prefers-color-scheme: dark)');
+mq.addEventListener && mq.addEventListener('change', e => {
+  if (!new URLSearchParams(location.search).get('scoutTheme')) {
+    document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+    fullRedraw();
+  }
+});
+
+// initial paint
+window.addEventListener('load', () => { fullRedraw(); applyR(parseFloat(rSlider.value)); });
+fullRedraw();
+applyR(parseFloat(rSlider.value));
+</script>
+</body>
+</html>
